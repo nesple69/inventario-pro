@@ -1138,6 +1138,7 @@
                                     <tr>
                                         <th>Categoria</th>
                                         <th>Numero Prodotti</th>
+                                        <th>Valore Totale</th>
                                         <th>Sottocategorie</th>
                                         <th>Azioni</th>
                                     </tr>
@@ -2017,10 +2018,17 @@
             const tbody = document.getElementById('categoriesTableBody');
             if (!tbody) return;
 
-            tbody.innerHTML = appData.categories.map(c => `
+            const currency = appData.settings.currency === 'EUR' ? '€' : '$';
+
+            tbody.innerHTML = appData.categories.map(c => {
+                const catProducts = appData.products.filter(p => p.category === c.name);
+                const totalVal = catProducts.reduce((sum, p) => sum + (p.quantity * p.price), 0);
+
+                return `
                 <tr class="fade-in">
                     <td><strong>${c.name}</strong></td>
-                    <td><span class="badge badge-unit">${c.productCount} Prodotti</span></td>
+                    <td><span class="badge badge-unit">${catProducts.length} Prodotti</span></td>
+                    <td><span class="badge badge-success">${currency} ${totalVal.toLocaleString('it-IT', { minimumFractionDigits: 2 })}</span></td>
                     <td>
                         <div class="d-flex flex-wrap gap-5">
                             ${c.subcategories.map(sub => `<span class="badge badge-unit">${sub}</span>`).join('')}
@@ -2032,8 +2040,8 @@
                             <button class="action-btn delete" onclick="deleteCategory(${c.id})" title="Elimina"><i class="fas fa-trash-alt"></i></button>
                         </div>
                     </td>
-                </tr>
-            `).join('');
+                </tr>`;
+            }).join('');
         }
 
         function renderSuppliersTable() {
@@ -2368,6 +2376,8 @@
             const tableColumn = ["Categoria", "Prodotti", "Quantità Totale", "Valore Totale"];
             const tableRows = [];
 
+            const currency = appData.settings.currency === 'EUR' ? '€' : '$';
+
             appData.categories.forEach(cat => {
                 const catProducts = appData.products.filter(p => p.category === cat.name);
                 const totalQty = catProducts.reduce((sum, p) => sum + p.quantity, 0);
@@ -2377,7 +2387,7 @@
                     cat.name,
                     catProducts.length,
                     totalQty.toFixed(2),
-                    "€ " + totalVal.toFixed(2)
+                    currency + " " + totalVal.toLocaleString('it-IT', { minimumFractionDigits: 2 })
                 ]);
             });
 
@@ -2505,20 +2515,22 @@
             const tableColumn = ["Prodotto", "Qta", "Prezzo", "Totale"];
             const tableRows = [];
 
+            const currency = appData.settings.currency === 'EUR' ? '€' : '$';
+
             appData.products.forEach(product => {
                 const rowTotal = product.quantity * product.price;
                 totalValue += rowTotal;
                 const productData = [
                     product.name,
                     product.quantity,
-                    "€ " + product.price.toFixed(2),
-                    "€ " + rowTotal.toFixed(2)
+                    currency + " " + product.price.toFixed(2),
+                    currency + " " + rowTotal.toFixed(2)
                 ];
                 tableRows.push(productData);
             });
 
             // Add total row
-            tableRows.push(["", "", "TOTALE VALORE", "€ " + totalValue.toFixed(2)]);
+            tableRows.push(["", "", "TOTALE VALORE", currency + " " + totalValue.toFixed(2)]);
 
             doc.autoTable({
                 head: [tableColumn],
@@ -2759,17 +2771,18 @@
             const ctx = document.getElementById('categoryChartCanvas');
             if (!ctx) return;
 
-            // Prepare data
+            const currency = appData.settings.currency === 'EUR' ? '€' : '$';
+
+            // Prepare data: Value per Category
             const labels = appData.categories.map(c => c.name);
             const data = appData.categories.map(c => {
-                // Recalculate count to be sure
-                return appData.products.filter(p => p.category === c.name).length;
+                return appData.products
+                    .filter(p => p.category === c.name)
+                    .reduce((sum, p) => sum + (p.quantity * p.price), 0);
             });
 
             if (catChartInstance) catChartInstance.destroy();
 
-            // Register the plugin globally or locally, but Chart.js 3+ usually needs manual reg if not globally done.
-            // But CDN usually registers if possible. Let's register locally to be safe.
             Chart.register(ChartDataLabels);
 
             catChartInstance = new Chart(ctx, {
@@ -2777,7 +2790,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Prodotti per Categoria',
+                        label: 'Valore per Categoria',
                         data: data,
                         backgroundColor: [
                             '#4361ee', '#3a0ca3', '#7209b7', '#f72585', '#4cc9f0',
@@ -2799,7 +2812,7 @@
                                     let value = context.parsed;
                                     let total = context.chart._metasets[context.datasetIndex].total;
                                     let percentage = (value / total * 100).toFixed(1) + '%';
-                                    return label + value + ' (' + percentage + ')';
+                                    return label + currency + ' ' + value.toLocaleString('it-IT', { minimumFractionDigits: 2 }) + ' (' + percentage + ')';
                                 }
                             }
                         },
