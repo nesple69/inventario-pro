@@ -99,6 +99,41 @@
             letter-spacing: -0.5px;
         }
 
+        .sync-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .sync-status.online {
+            background: rgba(46, 196, 182, 0.1);
+            color: var(--success);
+        }
+
+        .sync-status.offline {
+            background: rgba(108, 117, 125, 0.1);
+            color: var(--gray);
+        }
+
+        .sync-status.syncing {
+            background: rgba(67, 97, 238, 0.1);
+            color: var(--primary);
+        }
+
+        .sync-status.error {
+            background: rgba(230, 57, 70, 0.1);
+            color: var(--danger);
+        }
+
+        .sync-status i {
+            font-size: 0.9rem;
+        }
+
         .logo-text p {
             font-size: 0.8rem;
             color: var(--gray);
@@ -876,8 +911,9 @@
                     <p>Gestione magazzino avanzata</p>
                 </div>
             </div>
-            <div class="status-badge">
-                <i class="fas fa-cloud"></i> Dati salvati automaticamente
+            <div id="cloudStatus" class="sync-status offline">
+                <i class="fas fa-cloud"></i>
+                <span id="cloudStatusText">Locale</span>
             </div>
         </header>
 
@@ -1076,6 +1112,11 @@
                         <div class="section-header" style="margin-bottom: 1.5rem;">
                             <h3><i class="fas fa-boxes"
                                     style="margin-right: 0.5rem; color: var(--primary);"></i>Catalogo Completo</h3>
+                        </div>
+                        <div style="margin-bottom: 1rem;">
+                            <input type="text" id="productSearchInput" class="form-input"
+                                placeholder="🔍 Cerca prodotto per nome, categoria o fornitore..."
+                                onkeyup="filterProductsTable()" style="font-size: 1rem; padding: 0.75rem 1rem;">
                         </div>
                         <div class="table-responsive">
                             <table class="data-table">
@@ -1291,13 +1332,34 @@
                                 Incolla qui l'URL ottenuto dopo aver pubblicato lo script su Google Apps Script.
                             </p>
                         </div>
-                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <div class="form-group" style="margin-top: 1rem;">
+                            <label class="form-label">
+                                <input type="checkbox" id="autoSyncEnabled" onchange="toggleAutoSync()"
+                                    style="margin-right: 0.5rem;">
+                                Sincronizzazione Automatica
+                            </label>
+                            <p style="font-size: 0.8rem; color: var(--gray); margin-top: 5px;">
+                                Quando attiva, i dati vengono inviati automaticamente a Google Sheets dopo ogni
+                                modifica.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 1rem; margin-top: 1.5rem; flex-wrap: wrap;">
                             <button class="btn btn-primary" onclick="syncToGoogle()"><i
                                     class="fas fa-cloud-upload-alt"></i>Invia a Google</button>
                             <button class="btn btn-outline" onclick="restoreFromGoogle()"><i
                                     class="fas fa-cloud-download-alt"></i>Ripristina da Google</button>
+                            <button class="btn btn-outline" onclick="generateQRCode()"><i
+                                    class="fas fa-qrcode"></i>Genera QR Code</button>
                             <button class="btn btn-success" onclick="saveSettings()" style="margin-left: auto;"><i
                                     class="fas fa-save"></i>Salva Impostazioni</button>
+                        </div>
+                        <div id="qrCodeContainer"
+                            style="display: none; margin-top: 1.5rem; text-align: center; padding: 1.5rem; background: #f8f9fa; border-radius: 12px;">
+                            <h4 style="margin-bottom: 1rem;">Scansiona con il tuo dispositivo mobile</h4>
+                            <div id="qrCodeImage"></div>
+                            <p style="font-size: 0.85rem; color: var(--gray); margin-top: 1rem;">
+                                Apri l'app sul dispositivo mobile e incolla l'URL nelle impostazioni
+                            </p>
                         </div>
                     </div>
 
@@ -1563,6 +1625,38 @@
         </div>
     </div>
 
+    <!-- QUICK QUANTITY UPDATE MODAL -->
+    <div class="modal" id="quickQuantityModal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-edit" style="color: var(--primary);"></i>Aggiorna Quantità
+                </div>
+                <button class="modal-close" onclick="closeQuickQuantityModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="form-label">Prodotto</label>
+                    <input type="text" id="quickProductName" class="form-input" readonly
+                        style="background: #f8f9fa; cursor: not-allowed;">
+                </div>
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label class="form-label">Quantità Attuale</label>
+                    <input type="text" id="quickCurrentQuantity" class="form-input" readonly
+                        style="background: #f8f9fa; cursor: not-allowed;">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Nuova Quantità</label>
+                    <input type="number" id="quickNewQuantity" class="form-input" placeholder="Inserisci nuova quantità"
+                        min="0" step="0.001" style="font-size: 1.2rem; font-weight: 600; color: var(--primary);">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeQuickQuantityModal()">Annulla</button>
+                <button class="btn btn-success" onclick="saveQuickQuantity()"><i class="fas fa-check"></i>Salva</button>
+            </div>
+        </div>
+    </div>
+
     <div class="notification" id="notification">
         <i class="fas fa-check-circle notification-icon"></i>
         <div class="notification-content">
@@ -1690,6 +1784,12 @@
                 const el = document.getElementById(id);
                 if (el) el.value = value;
             }
+
+            // Carica stato auto-sync
+            const autoSyncCheckbox = document.getElementById('autoSyncEnabled');
+            if (autoSyncCheckbox) {
+                autoSyncCheckbox.checked = settings.autoSync !== false;
+            }
         }
 
         function populateCategoryDropdown(selectId) {
@@ -1764,6 +1864,7 @@
                     <td class="price-cell">${currency} ${p.price.toFixed(2)}</td>
                     <td>
                         <div class="table-actions">
+                            <button class="action-btn" onclick="openQuickQuantityModal(${p.id})" title="Aggiorna Quantità" style="background: rgba(76, 201, 240, 0.1); color: var(--accent);"><i class="fas fa-hashtag"></i></button>
                             <button class="action-btn edit" onclick="editProduct(${p.id})" title="Modifica"><i class="fas fa-edit"></i></button>
                             <button class="action-btn delete" onclick="deleteProduct(${p.id})" title="Elimina"><i class="fas fa-trash-alt"></i></button>
                         </div>
@@ -1989,6 +2090,101 @@
             closeAddProductModal();
             updateAll();
             showNotification('Prodotto aggiornato!');
+        }
+
+        // QUICK QUANTITY UPDATE
+        let currentQuickEditProductId = null;
+
+        function openQuickQuantityModal(productId) {
+            const product = appData.products.find(p => p.id === productId);
+            if (!product) return;
+
+            currentQuickEditProductId = productId;
+
+            document.getElementById('quickProductName').value = product.name;
+            document.getElementById('quickCurrentQuantity').value = `${product.quantity} ${product.unit}`;
+            document.getElementById('quickNewQuantity').value = product.quantity;
+
+            document.getElementById('quickQuantityModal').classList.add('show');
+
+            // Focus on input
+            setTimeout(() => {
+                const input = document.getElementById('quickNewQuantity');
+                input.focus();
+                input.select();
+            }, 100);
+        }
+
+        function closeQuickQuantityModal() {
+            document.getElementById('quickQuantityModal').classList.remove('show');
+            currentQuickEditProductId = null;
+        }
+
+        function saveQuickQuantity() {
+            if (!currentQuickEditProductId) return;
+
+            const newQuantity = parseFloat(document.getElementById('quickNewQuantity').value);
+
+            if (isNaN(newQuantity) || newQuantity < 0) {
+                showNotification('Inserisci una quantità valida', 'error');
+                return;
+            }
+
+            const productIndex = appData.products.findIndex(p => p.id === currentQuickEditProductId);
+            if (productIndex === -1) return;
+
+            const oldQuantity = appData.products[productIndex].quantity;
+            appData.products[productIndex].quantity = newQuantity;
+
+            // Update status
+            appData.products[productIndex].status =
+                newQuantity === 0 ? 'out-of-stock' :
+                    newQuantity <= appData.settings.lowStockLimit ? 'low-stock' : 'in-stock';
+
+            closeQuickQuantityModal();
+            updateAll();
+
+            const productName = appData.products[productIndex].name;
+            showNotification(`Quantità aggiornata: ${productName} (${oldQuantity} → ${newQuantity})`, 'success');
+        }
+
+        // PRODUCT TABLE FILTER
+        function filterProductsTable() {
+            const searchTerm = document.getElementById('productSearchInput').value.toLowerCase();
+            const tbody = document.getElementById('allProductsTableBody');
+            if (!tbody) return;
+
+            const filteredProducts = appData.products.filter(product =>
+                product.name.toLowerCase().includes(searchTerm) ||
+                product.category.toLowerCase().includes(searchTerm) ||
+                product.subcategory.toLowerCase().includes(searchTerm) ||
+                (product.supplier && product.supplier.toLowerCase().includes(searchTerm))
+            );
+
+            const currency = appData.settings.currency === 'EUR' ? '€' : '$';
+            tbody.innerHTML = filteredProducts.map(p => {
+                return `
+                <tr class="fade-in">
+                    <td class="product-cell">
+                        <span class="product-name" style="font-weight: 600; color: var(--dark);">${p.name}</span>
+                    </td>
+                    <td><span class="product-meta">${p.supplier || 'Nessun fornitore'}</span></td>
+                    <td><span class="badge badge-category">${p.category}</span></td>
+                    <td><span class="subcategory-text">${p.subcategory || '-'}</span></td>
+                    <td class="quantity-cell">
+                        <span class="quantity-value">${p.quantity}</span>
+                        <span class="quantity-unit">${p.unit}</span>
+                    </td>
+                    <td class="price-cell">${currency} ${p.price.toFixed(2)}</td>
+                    <td>
+                        <div class="table-actions">
+                            <button class="action-btn" onclick="openQuickQuantityModal(${p.id})" title="Aggiorna Quantità" style="background: rgba(76, 201, 240, 0.1); color: var(--accent);"><i class="fas fa-hashtag"></i></button>
+                            <button class="action-btn edit" onclick="editProduct(${p.id})" title="Modifica"><i class="fas fa-edit"></i></button>
+                            <button class="action-btn delete" onclick="deleteProduct(${p.id})" title="Elimina"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
         }
 
         function deleteProduct(productId) {
@@ -2553,6 +2749,38 @@
         }
 
         // FUNZIONI IMPOSTAZIONI
+        function toggleAutoSync() {
+            const checkbox = document.getElementById('autoSyncEnabled');
+            appData.settings.autoSync = checkbox.checked;
+            saveToCloud();
+
+            if (checkbox.checked) {
+                showNotification('Sincronizzazione automatica attivata', 'success');
+                updateCloudStatus('online', 'Auto-sync ON');
+            } else {
+                showNotification('Sincronizzazione automatica disattivata', 'warning');
+                updateCloudStatus('offline', 'Locale');
+            }
+        }
+
+        function generateQRCode() {
+            const url = document.getElementById('googleScriptUrl').value;
+            if (!url) {
+                showNotification('Inserisci prima l\'URL dello script', 'error');
+                return;
+            }
+
+            const container = document.getElementById('qrCodeContainer');
+            const qrImage = document.getElementById('qrCodeImage');
+
+            // Usa un servizio API per generare il QR code
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(url)}`;
+            qrImage.innerHTML = `<img src="${qrUrl}" alt="QR Code" style="max-width: 250px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">`;
+            container.style.display = 'block';
+
+            showNotification('QR Code generato!', 'success');
+        }
+
         function saveSettings() {
             try {
                 const notifications = document.getElementById('lowStockNotifications');
@@ -2965,6 +3193,38 @@
 
         function saveToCloud() {
             localStorage.setItem('inventarioData', JSON.stringify(appData));
+
+            // Auto-Sync to Google Sheets
+            if (appData.settings.autoSync && appData.settings.googleScriptUrl) {
+                debounceAutoSync();
+            }
+        }
+
+        let autoSyncTimeout;
+        function debounceAutoSync() {
+            updateCloudStatus('syncing', 'In coda...');
+            clearTimeout(autoSyncTimeout);
+            autoSyncTimeout = setTimeout(() => {
+                syncToGoogle(true); // true per modalità silenziosa
+            }, 3000); // Aspetta 3 secondi di inattività
+        }
+
+        function updateCloudStatus(status, message) {
+            const statusEl = document.getElementById('cloudStatus');
+            const textEl = document.getElementById('cloudStatusText');
+            if (!statusEl || !textEl) return;
+
+            statusEl.className = 'sync-status ' + status;
+            textEl.textContent = message || (status === 'online' ? 'Sincronizzato' : status === 'offline' ? 'Locale' : 'In corso...');
+
+            const icon = statusEl.querySelector('i');
+            if (status === 'syncing') {
+                icon.className = 'fas fa-sync fa-spin';
+            } else if (status === 'error') {
+                icon.className = 'fas fa-exclamation-triangle';
+            } else {
+                icon.className = 'fas fa-cloud';
+            }
         }
         function showNotification(message, type = 'success') {
             const notification = document.getElementById('notification');
@@ -2979,90 +3239,115 @@
 
 
         // GOOGLE SHEETS INTEGRATION
-        function syncToGoogle() {
+        function syncToGoogle(silent = false) {
             // Forza aggiornamento URL
             const urlInput = document.getElementById('googleScriptUrl');
             if (urlInput && urlInput.value) {
                 appData.settings.googleScriptUrl = urlInput.value.trim();
-                saveToCloud();
+                localStorage.setItem('inventarioData', JSON.stringify(appData));
             }
 
             const url = appData.settings.googleScriptUrl;
             if (!url || !url.startsWith('https://script.google.com')) {
-                showNotification('URL Script non valido. Incolla l\'indirizzo corretto nelle Impostazioni.', 'error');
+                if (!silent) {
+                    showNotification('URL Script non valido. Incolla l\'indirizzo corretto nelle Impostazioni.', 'error');
+                    updateCloudStatus('error', 'URL mancante');
+                }
                 return;
             }
 
-            showNotification('Invio dati in corso...', 'warning');
+            if (!silent) {
+                showNotification('Invio dati in corso...', 'warning');
+            }
+            updateCloudStatus('syncing', 'Sincronizzazione...');
 
             // Metodo Iframe (più compatibile con redirect di Google)
             let iframe = document.getElementById('sync-iframe');
             if (!iframe) {
                 iframe = document.createElement('iframe');
                 iframe.id = 'sync-iframe';
-                iframe.name = 'sync-iframe';
                 iframe.style.display = 'none';
                 document.body.appendChild(iframe);
             }
 
-            // Pulizia form precedenti
-            const oldForm = document.getElementById('sync-form');
-            if (oldForm) oldForm.remove();
-
-            const form = document.createElement('form');
-            form.id = 'sync-form';
-            form.method = 'POST';
-            form.action = url;
-            form.target = 'sync-iframe';
-            form.style.display = 'none';
-
-            const input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'data';
-            input.value = JSON.stringify(appData);
-            form.appendChild(input);
-
-            document.body.appendChild(form);
-
             try {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                form.target = 'sync-iframe';
+
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'data';
+                input.value = JSON.stringify(appData);
+                form.appendChild(input);
+
+                document.body.appendChild(form);
                 form.submit();
+                document.body.removeChild(form);
+
+                // Feedback positivo dopo un breve delay
                 setTimeout(() => {
-                    showNotification('Inviato con successo! Controlla il foglio Google.', 'success');
-                    if (form.parentNode) form.parentNode.removeChild(form);
+                    if (!silent) {
+                        showNotification('Dati inviati a Google Sheets!', 'success');
+                    }
+                    updateCloudStatus('online', 'Sincronizzato');
                 }, 2000);
             } catch (e) {
-                showNotification('Errore di invio: ' + e.message, 'error');
+                if (!silent) {
+                    showNotification('Errore di invio: ' + e.message, 'error');
+                }
+                updateCloudStatus('error', 'Errore sync');
             }
         }
 
-        function restoreFromGoogle() {
+        function restoreFromGoogle(silent = false) {
             const url = appData.settings.googleScriptUrl;
             if (!url) {
-                showNotification('Inserisci prima l\'URL dello script nelle impostazioni', 'error');
+                if (!silent) {
+                    showNotification('Inserisci prima l\'URL dello script nelle impostazioni', 'error');
+                    updateCloudStatus('error', 'URL mancante');
+                }
                 return;
             }
 
-            if (!confirm('Questo sovrascriverà i dati locali con quelli presenti su Google Sheets. Continuare?')) return;
+            if (!silent && !confirm('Questo sovrascriverà i dati locali con quelli presenti su Google Sheets. Continuare?')) return;
 
-            showNotification('Scaricamento dati...', 'warning');
+            if (!silent) {
+                showNotification('Scaricamento dati...', 'warning');
+            }
+            updateCloudStatus('syncing', 'Caricamento...');
 
             fetch(url)
                 .then(response => response.json())
                 .then(data => {
                     if (data && data.products) {
                         appData = data;
-                        saveToCloud(); // Save locally
+                        // Mantieni autoSync attivo
+                        if (appData.settings.autoSync === undefined) {
+                            appData.settings.autoSync = true;
+                        }
+                        localStorage.setItem('inventarioData', JSON.stringify(appData));
                         updateAll();
                         // Update settings inputs 
                         loadSettingsTab();
-                        showNotification('Dati ripristinati da Google!', 'success');
+                        if (!silent) {
+                            showNotification('Dati ripristinati da Google!', 'success');
+                        }
+                        updateCloudStatus('online', 'Sincronizzato');
                     } else {
-                        showNotification('Dati non validi ricevuti da Google', 'error');
+                        if (!silent) {
+                            showNotification('Dati non validi ricevuti da Google', 'error');
+                        }
+                        updateCloudStatus('error', 'Dati non validi');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
-                    showNotification('Errore durante il ripristino: ' + error.message, 'error');
+                    if (!silent) {
+                        showNotification('Errore durante il ripristino: ' + error.message, 'error');
+                    }
+                    updateCloudStatus('offline', 'Locale');
                 });
         }
 
@@ -3077,13 +3362,21 @@
                     appData.suppliers = parsedData.suppliers || appData.suppliers;
                     appData.settings = parsedData.settings || appData.settings;
 
-                    // Pulizia campi se necessario (già gestito dal merge sopra)
+                    // Abilita auto-sync di default se non impostato
+                    if (appData.settings.autoSync === undefined) {
+                        appData.settings.autoSync = true;
+                    }
                 } catch (e) {
                     console.error('Errore nel caricamento dei dati salvati:', e);
                 }
             }
             loadDashboardData();
             showNotification('Sistema caricato!');
+
+            // Auto-restore da Google all'avvio (se configurato)
+            if (appData.settings.googleScriptUrl && appData.settings.autoSync) {
+                setTimeout(() => restoreFromGoogle(true), 1500);
+            }
 
             // Registrazione Service Worker per PWA
             if ('serviceWorker' in navigator) {
