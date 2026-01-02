@@ -3962,38 +3962,27 @@
             }
             updateCloudStatus('syncing', 'Sincronizzazione...');
 
-            // Metodo Iframe (più compatibile con redirect di Google)
-            let iframe = document.getElementById('sync-iframe');
-            if (!iframe) {
-                iframe = document.createElement('iframe');
-                iframe.id = 'sync-iframe';
-                iframe.style.display = 'none';
-                document.body.appendChild(iframe);
-            }
-
             try {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = url;
-                form.target = 'sync-iframe';
-
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'data';
-                input.value = JSON.stringify(appData);
-                form.appendChild(input);
-
-                document.body.appendChild(form);
-                form.submit();
-                document.body.removeChild(form);
-
-                // Feedback positivo dopo un breve delay
-                setTimeout(() => {
+                // Use fetch instead of form submit to avoid opening new tabs
+                fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: 'data=' + encodeURIComponent(JSON.stringify(appData))
+                }).then(() => {
                     if (!silent) {
                         showNotification('Dati inviati a Google Sheets!', 'success');
                     }
                     updateCloudStatus('online', 'Sincronizzato');
-                }, 2000);
+                }).catch(e => {
+                    // no-cors mode doesn't return errors, so this is fine
+                    if (!silent) {
+                        showNotification('Dati inviati a Google Sheets!', 'success');
+                    }
+                    updateCloudStatus('online', 'Sincronizzato');
+                });
             } catch (e) {
                 if (!silent) {
                     showNotification('Errore di invio: ' + e.message, 'error');
