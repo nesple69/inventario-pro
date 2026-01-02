@@ -1233,8 +1233,9 @@
                         <div class="form-grid">
                             <div class="form-group">
                                 <label class="form-label">Nome Categoria</label>
-                                <input type="text" id="categoryName" class="form-input"
-                                    placeholder="Esempio: Ferramenta">
+                                <input type="text" id="categoryName" class="form-input" list="categoryList"
+                                    placeholder="Seleziona o scrivi nuova categoria">
+                                <datalist id="categoryList"></datalist>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Sottocategoria Iniziale</label>
@@ -2566,51 +2567,95 @@
         }
 
         function saveCategory() {
-            const name = document.getElementById('modalCategoryName').value;
-            const subcategory = document.getElementById('modalSubcategoryName').value;
+            const nameInput = document.getElementById('modalCategoryName');
+            const subInput = document.getElementById('modalSubcategoryName');
+            const name = nameInput.value.trim();
+            const subcategory = subInput.value.trim();
 
             if (!name) {
                 showNotification('Inserisci un nome per la categoria', 'error');
                 return;
             }
 
-            const newCategory = {
-                id: Date.now(),
-                name: name,
-                productCount: 0,
-                subcategories: subcategory ? [subcategory] : []
-            };
+            // Check if category exists (case-insensitive)
+            const existingCategory = appData.categories.find(c => c.name.toLowerCase() === name.toLowerCase());
 
-            appData.categories.push(newCategory);
-            closeAddCategoryModal();
+            if (existingCategory) {
+                // Category exists
+                if (subcategory) {
+                    // Check if subcategory exists
+                    const subExists = existingCategory.subcategories.some(s => s.toLowerCase() === subcategory.toLowerCase());
+                    if (!subExists) {
+                        existingCategory.subcategories.push(subcategory);
+                        showNotification('Sottocategoria aggiunta alla categoria esistente!');
+                        closeAddCategoryModal();
+                    } else {
+                        showNotification('Sottocategoria già presente!', 'warning');
+                    }
+                } else {
+                    showNotification('Categoria già esistente!', 'warning');
+                }
+            } else {
+                const newCategory = {
+                    id: Date.now(),
+                    name: name,
+                    productCount: 0,
+                    subcategories: subcategory ? [subcategory] : []
+                };
+
+                appData.categories.push(newCategory);
+                closeAddCategoryModal();
+                showNotification('Categoria aggiunta!');
+            }
+
             updateAll();
-            showNotification('Categoria aggiunta!');
         }
 
         function addCategoryFromForm() {
-            const name = document.getElementById('categoryName').value;
-            const subcategory = document.getElementById('subcategoryName').value;
+            const nameInput = document.getElementById('categoryName');
+            const subInput = document.getElementById('subcategoryName');
+            const name = nameInput.value.trim();
+            const subcategory = subInput.value.trim();
 
             if (!name) {
                 showNotification('Inserisci un nome per la categoria', 'error');
                 return;
             }
 
-            const newCategory = {
-                id: Date.now(),
-                name: name,
-                productCount: 0,
-                subcategories: subcategory ? [subcategory] : []
-            };
+            // Check if category exists (case-insensitive)
+            const existingCategory = appData.categories.find(c => c.name.toLowerCase() === name.toLowerCase());
 
-            appData.categories.push(newCategory);
+            if (existingCategory) {
+                // Category exists
+                if (subcategory) {
+                    // Check if subcategory exists
+                    const subExists = existingCategory.subcategories.some(s => s.toLowerCase() === subcategory.toLowerCase());
+                    if (!subExists) {
+                        existingCategory.subcategories.push(subcategory);
+                        showNotification('Sottocategoria aggiunta alla categoria esistente!');
+                    } else {
+                        showNotification('Sottocategoria già presente!', 'warning');
+                    }
+                } else {
+                    showNotification('Categoria già esistente!', 'warning');
+                }
+            } else {
+                const newCategory = {
+                    id: Date.now(),
+                    name: name,
+                    productCount: 0,
+                    subcategories: subcategory ? [subcategory] : []
+                };
+
+                appData.categories.push(newCategory);
+                showNotification('Categoria aggiunta!');
+            }
 
             // Reset form
-            document.getElementById('categoryName').value = '';
-            document.getElementById('subcategoryName').value = '';
+            nameInput.value = '';
+            subInput.value = '';
 
             updateAll();
-            showNotification('Categoria aggiunta!');
         }
 
         function editCategory(categoryId) {
@@ -3399,6 +3444,19 @@
             populateCategoryDropdown('modalProductCategory');
             populateSupplierDropdown('productSupplier');
             populateSupplierDropdown('modalProductSupplier');
+            populateCategoryDatalist();
+        }
+
+        function populateCategoryDatalist() {
+            const datalist = document.getElementById('categoryList');
+            if (!datalist) return;
+
+            datalist.innerHTML = '';
+            appData.categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category.name;
+                datalist.appendChild(option);
+            });
         }
 
         function exportToExcel() {
