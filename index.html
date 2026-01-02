@@ -930,6 +930,8 @@
                             class="fas fa-truck-moving"></i><span>Fornitori</span></button>
                     <button class="nav-tab" onclick="showTab('reports')"><i
                             class="fas fa-chart-pie"></i><span>Report</span></button>
+                    <button class="nav-tab" onclick="showTab('monthly-inventory')"><i
+                            class="fas fa-clipboard-list"></i><span>Inventario Mensile</span></button>
                     <button class="nav-tab" onclick="showTab('settings')"><i
                             class="fas fa-sliders-h"></i><span>Impostazioni</span></button>
                 </nav>
@@ -1310,6 +1312,113 @@
                     </div>
                 </div>
 
+                <!-- MONTHLY INVENTORY TAB -->
+                <div class="tab-content" id="monthly-inventory-tab">
+                    <div class="section-header">
+                        <div class="header-title">
+                            <h2>Inventario Mensile</h2>
+                            <p>Aggiorna rapidamente le quantità per l'inventario del mese</p>
+                        </div>
+                        <div class="header-actions">
+                            <button class="btn btn-outline" onclick="exportMonthlyToExcel()"><i
+                                    class="fas fa-file-excel"></i>Esporta Excel</button>
+                            <button class="btn btn-success" onclick="createMonthlySnapshot()"><i
+                                    class="fas fa-camera"></i>Salva Snapshot</button>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-bottom: 1.5rem;">
+                        <div class="stats-grid" style="margin-bottom: 0;">
+                            <div class="stat-card-main">
+                                <div class="stat-icon-wrapper icon-blue"><i class="fas fa-clipboard-check"></i></div>
+                                <div class="stat-details">
+                                    <span class="stat-main-value" id="monthlyCountedProducts">0</span>
+                                    <span class="stat-main-label">Prodotti Verificati</span>
+                                </div>
+                            </div>
+                            <div class="stat-card-main">
+                                <div class="stat-icon-wrapper icon-orange"><i class="fas fa-hourglass-half"></i></div>
+                                <div class="stat-details">
+                                    <span class="stat-main-value" id="monthlyRemainingProducts">0</span>
+                                    <span class="stat-main-label">Da Verificare</span>
+                                </div>
+                            </div>
+                            <div class="stat-card-main">
+                                <div class="stat-icon-wrapper icon-purple"><i class="fas fa-calendar-alt"></i></div>
+                                <div class="stat-details">
+                                    <span class="stat-main-value" id="lastSnapshotDate">Mai</span>
+                                    <span class="stat-main-label">Ultimo Snapshot</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <!-- Department Selector -->
+                        <div class="department-selector">
+                            <span style="font-weight: 600; color: var(--gray); margin-right: 0.5rem;">Filtra
+                                Reparto:</span>
+                            <button class="department-btn active" onclick="setDepartmentFilter('tutti')"
+                                id="dept-btn-tutti">
+                                <i class="fas fa-layer-group"></i> Tutti
+                            </button>
+                            <button class="department-btn" onclick="setDepartmentFilter('cucina')" id="dept-btn-cucina">
+                                <i class="fas fa-utensils"></i> Cucina
+                            </button>
+                            <button class="department-btn" onclick="setDepartmentFilter('bar')" id="dept-btn-bar">
+                                <i class="fas fa-glass-martini-alt"></i> Bar
+                            </button>
+                        </div>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <div class="search-container">
+                                <i class="fas fa-search search-icon"></i>
+                                <input type="text" id="monthlySearchInput" class="search-input"
+                                    placeholder="Cerca prodotto per nome, categoria o fornitore..."
+                                    onkeyup="filterMonthlyInventory()">
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Prodotto</th>
+                                        <th>Reparto</th>
+                                        <th>Categoria</th>
+                                        <th>Fornitore</th>
+                                        <th>Quantità Attuale</th>
+                                        <th>Nuova Quantità</th>
+                                        <th>Azioni</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="monthlyInventoryTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card"
+                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                        <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-info-circle"></i>
+                            Gestione Inventario Mensile
+                        </h3>
+                        <p style="margin-bottom: 1rem; opacity: 0.95;">
+                            Usa questa sezione per aggiornare rapidamente le quantità durante l'inventario mensile.
+                            Le modifiche vengono salvate automaticamente.
+                        </p>
+                        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                            <button class="btn" style="background: white; color: #667eea;"
+                                onclick="showSnapshotsModal()">
+                                <i class="fas fa-history"></i>Storico Snapshot
+                            </button>
+                            <button class="btn btn-danger" onclick="showResetQuantitiesModal()">
+                                <i class="fas fa-redo"></i>Reset Quantità (Nuovo Mese)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- SETTINGS TAB -->
                 <div class="tab-content" id="settings-tab">
                     <div class="section-header">
@@ -1448,6 +1557,14 @@
                         <label class="form-label">Categoria</label>
                         <select id="modalProductCategory" class="form-select" onchange="updateSubcategories('modal')">
                             <option value="">Seleziona categoria</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Reparto</label>
+                        <select id="modalProductDepartment" class="form-select">
+                            <option value="entrambi">🏢 Entrambi</option>
+                            <option value="cucina">🍳 Cucina</option>
+                            <option value="bar">🍹 Bar</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -1625,6 +1742,82 @@
         </div>
     </div>
 
+    <!-- SNAPSHOTS HISTORY MODAL -->
+    <div class="modal" id="snapshotsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-history" style="color: var(--primary);"></i>Storico Snapshot
+                    Inventario</div>
+                <button class="modal-close" onclick="closeSnapshotsModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p style="color: var(--gray); margin-bottom: 1rem;">
+                    Gli snapshot salvano lo stato dell'inventario in un momento specifico. Puoi esportarli o
+                    ripristinarli.
+                </p>
+                <div id="snapshotsListContainer">
+                    <p style="text-align: center; color: var(--gray); padding: 2rem;">
+                        <i class="fas fa-inbox"
+                            style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 1rem;"></i>
+                        Nessuno snapshot salvato
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeSnapshotsModal()">Chiudi</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RESET QUANTITIES MODAL -->
+    <div class="modal" id="resetQuantitiesModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title"><i class="fas fa-exclamation-triangle" style="color: var(--warning);"></i>Reset
+                    Quantità - Nuovo Mese</div>
+                <button class="modal-close" onclick="closeResetQuantitiesModal()"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div
+                    style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem;">
+                    <h4 style="color: #856404; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-info-circle"></i>
+                        Attenzione
+                    </h4>
+                    <p style="color: #856404; margin: 0; font-size: 0.9rem;">
+                        Questa operazione azzererà <strong>SOLO le quantità</strong> di tutti i prodotti.
+                        Tutti i prodotti, categorie, fornitori e prezzi rimarranno invariati.
+                    </p>
+                </div>
+
+                <div
+                    style="background: #d1ecf1; border: 1px solid #bee5eb; border-radius: 10px; padding: 1rem; margin-bottom: 1.5rem;">
+                    <h4 style="color: #0c5460; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-camera"></i>
+                        Snapshot Automatico
+                    </h4>
+                    <p style="color: #0c5460; margin: 0; font-size: 0.9rem;">
+                        Prima del reset verrà creato automaticamente uno snapshot dell'inventario corrente
+                        con la data di oggi.
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="confirmResetCheckbox" style="margin-right: 0.5rem;">
+                        Confermo di voler azzerare tutte le quantità
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeResetQuantitiesModal()">Annulla</button>
+                <button class="btn btn-danger" onclick="confirmResetQuantities()" id="confirmResetBtn" disabled>
+                    <i class="fas fa-redo"></i>Reset Quantità
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- QUICK QUANTITY UPDATE MODAL -->
     <div class="modal" id="quickQuantityModal">
         <div class="modal-content" style="max-width: 450px;">
@@ -1682,7 +1875,9 @@
                 { id: 1, name: "Apple Store", phone: "+39 02 1234567", email: "orders@apple.com", productCount: 2 },
                 { id: 2, name: "Fornitore Alimentari", phone: "+39 055 123456", email: "info@alimentari.it", productCount: 2 }
             ],
-            settings: { language: 'it', currency: 'EUR', decimalPlaces: 2, lowStockLimit: 5, stockNotifications: 'all', googleScriptUrl: 'https://script.google.com/macros/s/AKfycbz3DcZAXcFCX92DUWzZ7ToDOXQowrAseKwM11qcLW-gPwJ4wbW0PoDm8QEkK2_cTi_b/exec' }
+            settings: { language: 'it', currency: 'EUR', decimalPlaces: 2, lowStockLimit: 5, stockNotifications: 'all', googleScriptUrl: 'https://script.google.com/macros/s/AKfycbz3DcZAXcFCX92DUWzZ7ToDOXQowrAseKwM11qcLW-gPwJ4wbW0PoDm8QEkK2_cTi_b/exec' },
+            monthlySnapshots: [],
+            monthlyInventoryChanges: {}
         };
 
         // INITIALIZATION
@@ -1734,6 +1929,7 @@
                 'categories': loadCategoriesTab,
                 'suppliers': loadSuppliersTab,
                 'reports': loadReportsTab,
+                'monthly-inventory': loadMonthlyInventoryTab,
                 'settings': loadSettingsTab
             };
 
@@ -1767,6 +1963,11 @@
         function loadReportsTab() {
             // Give time for display: block to take effect before rendering charts
             setTimeout(renderCharts, 50);
+        }
+
+        function loadMonthlyInventoryTab() {
+            renderMonthlyInventoryTable();
+            updateMonthlyStats();
         }
 
         function loadSettingsTab() {
@@ -1929,6 +2130,7 @@
             const name = document.getElementById('modalProductName').value;
             const categoryId = document.getElementById('modalProductCategory').value;
             const subcategory = document.getElementById('modalProductSubcategory').value;
+            const department = document.getElementById('modalProductDepartment').value;
             const quantity = parseFloat(document.getElementById('modalProductQuantity').value);
             const unit = document.getElementById('modalProductUnit').value;
             const price = parseFloat(document.getElementById('modalProductPrice').value);
@@ -1947,6 +2149,7 @@
                 name: name,
                 category: category.name,
                 subcategory: subcategory,
+                department: department || 'entrambi',
                 quantity: quantity,
                 unit: unit,
                 price: price,
@@ -1958,6 +2161,7 @@
             category.productCount++;
             if (supplier) supplier.productCount++;
 
+            saveToCloud();
             closeAddProductModal();
             updateAll();
             showNotification('Prodotto aggiunto!');
@@ -2016,6 +2220,7 @@
 
             // Popola i campi con i dati del prodotto
             document.getElementById('modalProductName').value = product.name;
+            document.getElementById('modalProductDepartment').value = product.department || 'entrambi';
 
             const category = appData.categories.find(c => c.name === product.category);
             if (category) {
@@ -2050,6 +2255,7 @@
             const name = document.getElementById('modalProductName').value;
             const categoryId = document.getElementById('modalProductCategory').value;
             const subcategory = document.getElementById('modalProductSubcategory').value;
+            const department = document.getElementById('modalProductDepartment').value;
             const quantity = parseFloat(document.getElementById('modalProductQuantity').value);
             const unit = document.getElementById('modalProductUnit').value;
             const price = parseFloat(document.getElementById('modalProductPrice').value);
@@ -2077,6 +2283,7 @@
                 name: name,
                 category: category.name,
                 subcategory: subcategory,
+                department: department || 'entrambi',
                 quantity: quantity,
                 unit: unit,
                 price: price,
@@ -2087,6 +2294,7 @@
             category.productCount++;
             if (supplier) supplier.productCount++;
 
+            saveToCloud();
             closeAddProductModal();
             updateAll();
             showNotification('Prodotto aggiornato!');
@@ -2955,11 +3163,19 @@
                                 appData.suppliers.push(supplier);
                             }
 
+                            let dept = 'entrambi';
+                            if (row.Reparto) {
+                                const r = row.Reparto.toLowerCase();
+                                if (r.includes('cucina')) dept = 'cucina';
+                                else if (r.includes('bar')) dept = 'bar';
+                            }
+
                             const newProduct = {
                                 id: Date.now() + importedCount,
                                 name: row.Prodotto,
                                 category: row.Categoria,
                                 subcategory: row.Sottocategoria || '',
+                                department: dept,
                                 quantity: parseFloat(row.Quantità) || 0,
                                 unit: row.Unità || 'pezzi',
                                 price: parseFloat(row['Prezzo unitario']) || 0,
@@ -3109,9 +3325,10 @@
         function exportToExcel() {
             try {
                 const data = appData.products.map(product => ({
+                    'Prodotto': product.name,
+                    'Reparto': (product.department || 'entrambi').charAt(0).toUpperCase() + (product.department || 'entrambi').slice(1),
                     'Categoria': product.category,
                     'Sottocategoria': product.subcategory,
-                    'Prodotto': product.name,
                     'Quantità': product.quantity,
                     'Unità': product.unit,
                     'Fornitore': product.supplier,
@@ -3126,6 +3343,410 @@
             } catch (error) {
                 showNotification('Errore esportazione', 'error');
             }
+        }
+
+        // MONTHLY INVENTORY FUNCTIONS
+
+        function setDepartmentFilter(department) {
+            appData.settings.selectedDepartment = department;
+            saveToCloud();
+
+            // Update UI
+            document.querySelectorAll('.department-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.id === `dept-btn-${department}`);
+            });
+
+            renderMonthlyInventoryTable();
+        }
+
+        function getDepartmentIcon(department) {
+            switch (department) {
+                case 'cucina': return '🍳 Cucina';
+                case 'bar': return '🍹 Bar';
+                default: return '🏢 Entrambi';
+            }
+        }
+
+        function getDepartmentBadgeClass(department) {
+            switch (department) {
+                case 'cucina': return 'badge-cucina';
+                case 'bar': return 'badge-bar';
+                default: return 'badge-entrambi';
+            }
+        }
+
+        function renderMonthlyInventoryTable() {
+            const tbody = document.getElementById('monthlyInventoryTableBody');
+            if (!tbody) return;
+
+            const searchTerm = document.getElementById('monthlySearchInput')?.value.toLowerCase() || '';
+            const selectedDept = appData.settings.selectedDepartment || 'tutti';
+
+            // Update department buttons state on load
+            document.querySelectorAll('.department-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.id === `dept-btn-${selectedDept}`);
+            });
+
+            const filteredProducts = appData.products.filter(product => {
+                const matchesSearch = product.name.toLowerCase().includes(searchTerm) ||
+                    product.category.toLowerCase().includes(searchTerm) ||
+                    (product.supplier && product.supplier.toLowerCase().includes(searchTerm));
+
+                const productDept = product.department || 'entrambi';
+                const matchesDept = selectedDept === 'tutti' ||
+                    productDept === 'entrambi' ||
+                    productDept === selectedDept;
+
+                return matchesSearch && matchesDept;
+            });
+
+            tbody.innerHTML = filteredProducts.map(p => {
+                const isChanged = appData.monthlyInventoryChanges[p.id];
+                const rowClass = isChanged ? 'style="background: #e6f7ff;"' : '';
+                const dept = p.department || 'entrambi';
+
+                return `
+                <tr ${rowClass}>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <strong>${p.name}</strong>
+                            ${isChanged ? '<i class="fas fa-check-circle" style="color: var(--success); font-size: 0.9rem;" title="Modificato"></i>' : ''}
+                        </div>
+                    </td>
+                    <td><span class="badge ${getDepartmentBadgeClass(dept)}">${getDepartmentIcon(dept)}</span></td>
+                    <td><span class="badge badge-neutral">${p.category}</span></td>
+                    <td>${p.supplier || '-'}</td>
+                    <td>
+                        <span style="font-weight: 600; color: var(--gray);">${p.quantity} ${p.unit}</span>
+                    </td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <button class="btn-action" onclick="incrementQuantity(${p.id}, -1)" title="Decrementa">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <input type="number" 
+                                id="monthly-qty-${p.id}" 
+                                value="${p.quantity}" 
+                                min="0" 
+                                step="0.001"
+                                onchange="updateMonthlyQuantity(${p.id}, this.value)"
+                                style="width: 100px; padding: 0.5rem; border: 2px solid var(--primary); border-radius: 8px; text-align: center; font-weight: 600; font-size: 1rem;"
+                            />
+                            <button class="btn-action" onclick="incrementQuantity(${p.id}, 1)" title="Incrementa">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="openQuickQuantityModal(${p.id})">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            }).join('');
+
+            updateMonthlyStats(filteredProducts.length);
+        }
+
+        function updateMonthlyQuantity(productId, newQuantity) {
+            const qty = parseFloat(newQuantity);
+            if (isNaN(qty) || qty < 0) {
+                showNotification('Quantità non valida', 'error');
+                renderMonthlyInventoryTable();
+                return;
+            }
+
+            const productIndex = appData.products.findIndex(p => p.id === productId);
+            if (productIndex === -1) return;
+
+            appData.products[productIndex].quantity = qty;
+            appData.products[productIndex].status =
+                qty === 0 ? 'out-of-stock' :
+                    qty <= appData.settings.lowStockLimit ? 'low-stock' : 'in-stock';
+
+            // Mark as changed
+            appData.monthlyInventoryChanges[productId] = true;
+
+            saveToCloud();
+            updateAll();
+            renderMonthlyInventoryTable();
+        }
+
+        function incrementQuantity(productId, amount) {
+            const product = appData.products.find(p => p.id === productId);
+            if (!product) return;
+
+            const newQty = Math.max(0, product.quantity + amount);
+            updateMonthlyQuantity(productId, newQty);
+        }
+
+        function filterMonthlyInventory() {
+            renderMonthlyInventoryTable();
+        }
+
+        function updateMonthlyStats(totalFiltered = null) {
+            // Count changes only for filtered products if totalFiltered is provided
+            // Otherwise use total changes
+            const countedProducts = Object.keys(appData.monthlyInventoryChanges).filter(id => {
+                // Determine if this changed product is currently visible (matches filter)
+                // This is an approximation since we don't have the filtered list here without passing it
+                // Ideally, we pass the filtered list length.
+                return true;
+            }).length;
+
+            // To be more precise, let's just count how many of the currently filtered products are changed
+            // But for now, let's stick to total verified count vs total filtered list
+
+            const totalProducts = totalFiltered !== null ? totalFiltered : appData.products.length;
+
+            // Recalculate counted for the current view
+            // We need to know which products are in the view to count them accurately as "verified in this view"
+            // But simpler is: "Verified (Total)" and "Remaining (Total)"
+            // OR "Verified (View)" and "Remaining (View)"
+
+            // Let's go with View based statistics since we are filtering
+            let viewCounted = 0;
+            if (totalFiltered !== null) {
+                // We need to re-filter to check which ones are changed
+                // This is expensive to do again. 
+                // Let's assume passed totalFiltered is the denominator.
+                // The numerator should be how many of THESE products present in table are changed.
+                // Since we don't have the list, let's look at the DOM or re-filter.
+                // Let's re-filter for stats correctness.
+                const searchTerm = document.getElementById('monthlySearchInput')?.value.toLowerCase() || '';
+                const selectedDept = appData.settings.selectedDepartment || 'tutti';
+
+                const currentViewProducts = appData.products.filter(product => {
+                    const matchesSearch = product.name.toLowerCase().includes(searchTerm) ||
+                        product.category.toLowerCase().includes(searchTerm) ||
+                        (product.supplier && product.supplier.toLowerCase().includes(searchTerm));
+
+                    const productDept = product.department || 'entrambi';
+                    const matchesDept = selectedDept === 'tutti' ||
+                        productDept === 'entrambi' ||
+                        productDept === selectedDept;
+
+                    return matchesSearch && matchesDept;
+                });
+
+                viewCounted = currentViewProducts.filter(p => appData.monthlyInventoryChanges[p.id]).length;
+                document.getElementById('monthlyCountedProducts').textContent = viewCounted;
+                document.getElementById('monthlyRemainingProducts').textContent = totalFiltered - viewCounted;
+
+            } else {
+                const counted = Object.keys(appData.monthlyInventoryChanges).length;
+                const total = appData.products.length;
+                document.getElementById('monthlyCountedProducts').textContent = counted;
+                document.getElementById('monthlyRemainingProducts').textContent = total - counted;
+            }
+
+            // Update last snapshot date
+            if (appData.monthlySnapshots && appData.monthlySnapshots.length > 0) {
+                const lastSnapshot = appData.monthlySnapshots[appData.monthlySnapshots.length - 1];
+                const date = new Date(lastSnapshot.date);
+                document.getElementById('lastSnapshotDate').textContent = date.toLocaleDateString('it-IT');
+            } else {
+                document.getElementById('lastSnapshotDate').textContent = 'Mai';
+            }
+        }
+
+        function createMonthlySnapshot() {
+            const now = new Date();
+            const snapshot = {
+                id: Date.now(),
+                date: now.toISOString(),
+                products: appData.products.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    category: p.category,
+                    subcategory: p.subcategory,
+                    quantity: p.quantity,
+                    unit: p.unit,
+                    price: p.price,
+                    supplier: p.supplier
+                })),
+                totalValue: appData.products.reduce((sum, p) => sum + (p.quantity * p.price), 0),
+                totalProducts: appData.products.length
+            };
+
+            if (!appData.monthlySnapshots) {
+                appData.monthlySnapshots = [];
+            }
+
+            appData.monthlySnapshots.push(snapshot);
+            saveToCloud();
+
+            showNotification(`Snapshot salvato: ${now.toLocaleDateString('it-IT')} ${now.toLocaleTimeString('it-IT')}`, 'success');
+            updateMonthlyStats();
+        }
+
+        function exportMonthlyToExcel() {
+            try {
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('it-IT').replace(/\//g, '-');
+
+                const data = appData.products.map(product => ({
+                    'Data Inventario': dateStr,
+                    'Prodotto': product.name,
+                    'Reparto': (product.department || 'entrambi').charAt(0).toUpperCase() + (product.department || 'entrambi').slice(1),
+                    'Categoria': product.category,
+                    'Sottocategoria': product.subcategory,
+                    'Quantità': product.quantity,
+                    'Unità': product.unit,
+                    'Fornitore': product.supplier,
+                    'Prezzo Unitario': product.price,
+                    'Valore Totale': (product.quantity * product.price).toFixed(2)
+                }));
+
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, `Inventario ${dateStr}`);
+                XLSX.writeFile(wb, `Inventario_Mensile_${dateStr}.xlsx`);
+
+                showNotification('Inventario mensile esportato!', 'success');
+            } catch (error) {
+                console.error('Export error:', error);
+                showNotification('Errore durante l\'esportazione', 'error');
+            }
+        }
+
+        // Snapshots Modal Functions
+        function showSnapshotsModal() {
+            renderSnapshotsList();
+            document.getElementById('snapshotsModal').classList.add('show');
+        }
+
+        function closeSnapshotsModal() {
+            document.getElementById('snapshotsModal').classList.remove('show');
+        }
+
+        function renderSnapshotsList() {
+            const container = document.getElementById('snapshotsListContainer');
+            if (!container) return;
+
+            if (!appData.monthlySnapshots || appData.monthlySnapshots.length === 0) {
+                container.innerHTML = `
+                    <p style="text-align: center; color: var(--gray); padding: 2rem;">
+                        <i class="fas fa-inbox" style="font-size: 3rem; opacity: 0.3; display: block; margin-bottom: 1rem;"></i>
+                        Nessuno snapshot salvato
+                    </p>`;
+                return;
+            }
+
+            const currency = appData.settings.currency === 'EUR' ? '€' : '$';
+            container.innerHTML = appData.monthlySnapshots.slice().reverse().map(snapshot => {
+                const date = new Date(snapshot.date);
+                return `
+                    <div class="card" style="margin-bottom: 1rem; padding: 1rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h4 style="margin: 0 0 0.5rem 0; color: var(--primary);">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    ${date.toLocaleDateString('it-IT')} - ${date.toLocaleTimeString('it-IT')}
+                                </h4>
+                                <p style="margin: 0; color: var(--gray); font-size: 0.9rem;">
+                                    ${snapshot.totalProducts} prodotti • Valore: ${currency} ${snapshot.totalValue.toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                                </p>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <button class="btn btn-sm btn-outline" onclick="exportSnapshot(${snapshot.id})">
+                                    <i class="fas fa-download"></i> Esporta
+                                </button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteSnapshot(${snapshot.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
+
+        function exportSnapshot(snapshotId) {
+            const snapshot = appData.monthlySnapshots.find(s => s.id === snapshotId);
+            if (!snapshot) return;
+
+            try {
+                const date = new Date(snapshot.date);
+                const dateStr = date.toLocaleDateString('it-IT').replace(/\//g, '-');
+
+                const data = snapshot.products.map(product => ({
+                    'Data Snapshot': dateStr,
+                    'Prodotto': product.name,
+                    'Reparto': (product.department || 'entrambi').charAt(0).toUpperCase() + (product.department || 'entrambi').slice(1),
+                    'Categoria': product.category,
+                    'Sottocategoria': product.subcategory,
+                    'Quantità': product.quantity,
+                    'Unità': product.unit,
+                    'Fornitore': product.supplier,
+                    'Prezzo Unitario': product.price,
+                    'Valore Totale': (product.quantity * product.price).toFixed(2)
+                }));
+
+                const ws = XLSX.utils.json_to_sheet(data);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, `Snapshot ${dateStr}`);
+                XLSX.writeFile(wb, `Snapshot_${dateStr}.xlsx`);
+
+                showNotification('Snapshot esportato!', 'success');
+            } catch (error) {
+                showNotification('Errore durante l\'esportazione', 'error');
+            }
+        }
+
+        function deleteSnapshot(snapshotId) {
+            if (!confirm('Eliminare questo snapshot?')) return;
+
+            const index = appData.monthlySnapshots.findIndex(s => s.id === snapshotId);
+            if (index !== -1) {
+                appData.monthlySnapshots.splice(index, 1);
+                saveToCloud();
+                renderSnapshotsList();
+                updateMonthlyStats();
+                showNotification('Snapshot eliminato', 'success');
+            }
+        }
+
+        // Reset Quantities Modal Functions
+        function showResetQuantitiesModal() {
+            document.getElementById('confirmResetCheckbox').checked = false;
+            document.getElementById('confirmResetBtn').disabled = true;
+            document.getElementById('resetQuantitiesModal').classList.add('show');
+        }
+
+        function closeResetQuantitiesModal() {
+            document.getElementById('resetQuantitiesModal').classList.remove('show');
+        }
+
+        // Enable/disable reset button based on checkbox
+        document.addEventListener('DOMContentLoaded', function () {
+            const checkbox = document.getElementById('confirmResetCheckbox');
+            const btn = document.getElementById('confirmResetBtn');
+            if (checkbox && btn) {
+                checkbox.addEventListener('change', function () {
+                    btn.disabled = !this.checked;
+                });
+            }
+        });
+
+        function confirmResetQuantities() {
+            // Create automatic snapshot before reset
+            createMonthlySnapshot();
+
+            // Reset all quantities to 0
+            appData.products.forEach(product => {
+                product.quantity = 0;
+                product.status = 'out-of-stock';
+            });
+
+            // Clear monthly changes tracking
+            appData.monthlyInventoryChanges = {};
+
+            saveToCloud();
+            updateAll();
+            renderMonthlyInventoryTable();
+            closeResetQuantitiesModal();
+
+            showNotification('Quantità azzerate! Snapshot salvato automaticamente.', 'success');
         }
 
         // UTILITY
@@ -3188,6 +3809,7 @@
             renderCategoriesTable();
             renderSuppliersTable();
             updateAllDropdowns();
+            renderMonthlyInventoryTable(); // Update monthly inventory table
             saveToCloud(); // Auto-save to localStorage
         }
 
