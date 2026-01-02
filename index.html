@@ -597,13 +597,14 @@
         }
 
         .badge {
-            padding: 0.35rem 0.75rem;
-            border-radius: 8px;
-            font-size: 0.75rem;
+            padding: 0.5rem 1rem;
+            border-radius: 10px;
+            font-size: 0.85rem;
             font-weight: 700;
             display: inline-flex;
             align-items: center;
-            gap: 0.3rem;
+            gap: 0.4rem;
+            min-height: 32px;
         }
 
         .badge-success {
@@ -632,9 +633,9 @@
         }
 
         .btn-action {
-            width: 34px;
-            height: 34px;
-            border-radius: 8px;
+            width: 44px;
+            height: 44px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -643,12 +644,14 @@
             cursor: pointer;
             transition: var(--transition);
             color: var(--gray);
+            font-size: 1.1rem;
         }
 
         .btn-action:hover {
             border-color: var(--primary);
             color: var(--primary);
             background: rgba(67, 97, 238, 0.05);
+            transform: scale(1.05);
         }
 
         .btn-delete:hover {
@@ -823,6 +826,49 @@
         .chart-wrapper {
             height: 320px;
             position: relative;
+        }
+
+        /* Department Filter Buttons */
+        .department-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .department-btn {
+            padding: 0.75rem 1.5rem;
+            min-height: 48px;
+            border: 2px solid var(--border);
+            background: white;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--gray);
+            cursor: pointer;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .department-btn i {
+            font-size: 1.1rem;
+        }
+
+        .department-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(67, 97, 238, 0.05);
+            transform: translateY(-2px);
+        }
+
+        .department-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
         }
 
         /* Mobile Adjustments */
