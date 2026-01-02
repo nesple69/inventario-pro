@@ -1634,6 +1634,7 @@
                                     <th>Unità</th>
                                     <th>Fornitore</th>
                                     <th>Prezzo</th>
+                                    <th>Reparto</th>
                                 </tr>
                             </thead>
                             <tbody id="importPreviewBody"></tbody>
@@ -4009,6 +4010,202 @@
                 });
             }
         });
+
+        // EXCEL IMPORT FUNCTIONS
+        function showImportModal() {
+            const modal = document.getElementById('importModal');
+            if (modal) {
+                modal.classList.add('show');
+                // Reset file input
+                const fileInput = document.getElementById('excelFile');
+                if (fileInput) fileInput.value = '';
+                // Hide preview
+                const preview = document.getElementById('importPreview');
+                if (preview) preview.style.display = 'none';
+            }
+        }
+
+        function closeImportModal() {
+            const modal = document.getElementById('importModal');
+            if (modal) modal.classList.remove('show');
+        }
+
+        // Handle Excel file selection and preview
+        document.addEventListener('DOMContentLoaded', function () {
+            const fileInput = document.getElementById('excelFile');
+            if (fileInput) {
+                fileInput.addEventListener('change', function (e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = function (e) {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                            const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                            // Show preview
+                            displayImportPreview(jsonData);
+                        } catch (error) {
+                            showNotification('Errore nella lettura del file Excel: ' + error.message, 'error');
+                        }
+                    };
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+        });
+
+        function displayImportPreview(data) {
+            const preview = document.getElementById('importPreview');
+            const tbody = document.getElementById('importPreviewBody');
+
+            if (!preview || !tbody) return;
+
+            tbody.innerHTML = '';
+
+            // Show first 10 rows as preview
+            const previewData = data.slice(0, 10);
+            previewData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.Categoria || ''}</td>
+                    <td>${row.Sottocategoria || ''}</td>
+                    <td>${row.Prodotto || ''}</td>
+                    <td>${row.Quantità || row.Quantita || 0}</td>
+                    <td>${row.Unità || row.Unita || ''}</td>
+                    <td>${row.Fornitore || ''}</td>
+                    <td>${row.Prezzo || 0}</td>
+                    <td>${row.Reparto || 'entrambi'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            preview.style.display = 'block';
+        }
+
+        function processExcelImport() {
+            const fileInput = document.getElementById('excelFile');
+            if (!fileInput || !fileInput.files[0]) {
+                showNotification('Seleziona un file Excel prima di importare', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                    let importedCount = 0;
+                    let errorCount = 0;
+
+                    jsonData.forEach(row => {
+                        try {
+                            // Validate required fields
+                            if (!row.Prodotto || !row.Categoria || !row.Sottocategoria) {
+                                errorCount++;
+                                return;
+                            }
+
+                            // Get or create category
+                            let category = appData.categories.find(c => c.name === row.Categoria);
+                            if (!category) {
+                                const newCategoryId = appData.categories.length > 0
+                                    ? Math.max(...appData.categories.map(c => c.id)) + 1
+                                    : 1;
+                                category = {
+                                    id: newCategoryId,
+                                    name: row.Categoria,
+                                    subcategories: [],
+                                    productCount: 0
+                                };
+                                appData.categories.push(category);
+                            }
+
+                            // Add subcategory if not exists
+                            if (row.Sottocategoria && !category.subcategories.includes(row.Sottocategoria)) {
+                                category.subcategories.push(row.Sottocategoria);
+                            }
+
+                            // Get or create supplier
+                            let supplier = null;
+                            if (row.Fornitore) {
+                                supplier = appData.suppliers.find(s => s.name === row.Fornitore);
+                                if (!supplier) {
+                                    const newSupplierId = appData.suppliers.length > 0
+                                        ? Math.max(...appData.suppliers.map(s => s.id)) + 1
+                                        : 1;
+                                    supplier = {
+                                        id: newSupplierId,
+                                        name: row.Fornitore,
+                                        phone: '',
+                                        email: '',
+                                        productCount: 0
+                                    };
+                                    appData.suppliers.push(supplier);
+                                }
+                            }
+
+                            // Create product
+                            const newProductId = appData.products.length > 0
+                                ? Math.max(...appData.products.map(p => p.id)) + 1
+                                : 1;
+
+                            const quantity = parseFloat(row.Quantità || row.Quantita || 0);
+                            const price = parseFloat(row.Prezzo || 0);
+                            const unit = (row.Unità || row.Unita || 'pezzi').toLowerCase();
+                            const department = (row.Reparto || 'entrambi').toLowerCase();
+
+                            const newProduct = {
+                                id: newProductId,
+                                name: row.Prodotto,
+                                category: row.Categoria,
+                                subcategory: row.Sottocategoria,
+                                quantity: quantity,
+                                unit: unit,
+                                price: price,
+                                supplier: row.Fornitore || '',
+                                department: department,
+                                status: quantity > 5 ? 'in-stock' : quantity > 0 ? 'low-stock' : 'out-of-stock'
+                            };
+
+                            appData.products.push(newProduct);
+                            category.productCount++;
+                            if (supplier) supplier.productCount++;
+                            importedCount++;
+
+                        } catch (error) {
+                            console.error('Error importing row:', error);
+                            errorCount++;
+                        }
+                    });
+
+                    // Save and update
+                    saveData();
+                    updateAll();
+                    closeImportModal();
+
+                    // Show result
+                    if (importedCount > 0) {
+                        showNotification(`Importati ${importedCount} prodotti con successo!${errorCount > 0 ? ` (${errorCount} errori)` : ''}`, 'success');
+                    } else {
+                        showNotification('Nessun prodotto importato. Verifica il formato del file.', 'error');
+                    }
+
+                } catch (error) {
+                    showNotification('Errore durante l\'importazione: ' + error.message, 'error');
+                    console.error('Import error:', error);
+                }
+            };
+
+            reader.readAsArrayBuffer(file);
+        }
     </script>
 </body>
 
