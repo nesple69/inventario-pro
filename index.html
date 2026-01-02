@@ -661,6 +661,37 @@
             background: rgba(230, 57, 70, 0.05);
         }
 
+        /* Action buttons - ACTUAL class used in tables */
+        .action-btn {
+            width: 52px !important;
+            height: 52px !important;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--border);
+            background: white;
+            cursor: pointer;
+            transition: var(--transition);
+            color: var(--gray);
+            font-size: 1.3rem;
+            flex-shrink: 0;
+            margin: 0 4px;
+        }
+
+        .action-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(67, 97, 238, 0.05);
+            transform: scale(1.08);
+        }
+
+        .action-btn.delete:hover {
+            border-color: var(--danger);
+            color: var(--danger);
+            background: rgba(230, 57, 70, 0.05);
+        }
+
         /* Modals */
         .modal {
             display: none;
